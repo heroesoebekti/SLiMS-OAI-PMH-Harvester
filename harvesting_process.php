@@ -4,6 +4,7 @@
  * @Date                : 10/01/2026
  * @File name           : harvesting_process.php
  */
+
 defined('INDEX_AUTH') OR die('Direct access not allowed!');
 
 require __DIR__ . '/vendor/autoload.php';
@@ -144,7 +145,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'harvest' && (isset($_GET['node
                         }
                     }
 
-
                     $sql_bib = "REPLACE INTO biblio (gmd_id, title, isbn_issn, publisher_id, publish_year, language_id, publish_place_id, notes, spec_detail_info, input_date, last_update, collation, classification, call_number, image) VALUES ({$data['gmd_id']}, '".$dbs->escape_string($data['title'])."', '".$dbs->escape_string($data['isbn_issn'])."', {$data['publisher_id']}, {$data['publish_year']}, {$data['language_id']}, {$data['place_id']}, '".$dbs->escape_string($data['notes'])."', {$data['detailinfo']}, '$import_date', NOW(), '".$dbs->escape_string($data['collation'])."', '".$dbs->escape_string($data['classification'])."', '".$dbs->escape_string($data['call_number'])."', {$data['image']})";
 
                     if ($dbs->query($sql_bib)) {
@@ -173,7 +173,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'harvest' && (isset($_GET['node
                                 if ($stmt_att->execute()) {
                                     $file_id = $dbs->insert_id;
                                     if ($file_id) {
-                                        $dbs->query("REPLACE INTO biblio_attachment (biblio_id, file_id, access_type) VALUES ({$biblio_id}, {$file_id}, 'public')");
+                                        $dbs->query("REPLACE INTO biblio_attachment (biblio_id, file_id, placement, access_type) VALUES ({$biblio_id}, {$file_id}, 'link', 'public')");
                                     }
                                 }
                             }
@@ -217,6 +217,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'harvest' && (isset($_GET['node
                     }
 
                 } catch (\Throwable $inner_ex) {
+                    send_sse_event(['message' => 'DEBUG ERROR: ' . $inner_ex->getMessage(), 'type' => 'error'], 'log');
                 }
             }
             
