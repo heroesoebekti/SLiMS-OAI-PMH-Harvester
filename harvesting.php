@@ -89,6 +89,7 @@ if (isset($_POST['saveData']) && $can_write) {
             $sql_op->update('harvest_nodes', $data, 'id = ' . $updateRecordID);
             $msg = __('Repository Node Successfully Updated');
         } else {
+            $data['created_at'] = date('Y-m-d H:i:s');
             $sql_op->insert('harvest_nodes', $data);
             $msg = __('New Repository Node Successfully Saved');
         }
