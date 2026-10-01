@@ -69,6 +69,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'harvest' && (isset($_GET['node
                 $dbs->query("DELETE FROM search_biblio WHERE biblio_id = {$bid}");
                 $dbs->query("DELETE FROM biblio_author WHERE biblio_id = {$bid}");
                 $dbs->query("DELETE FROM biblio_topic WHERE biblio_id = {$bid}");
+                $dbs->query("DELETE FROM biblio_attachment WHERE biblio_id = {$bid}");
             }
 
             $dbs->query("DELETE FROM harvest_biblio WHERE node_id = {$node_id_pk}");
@@ -123,6 +124,27 @@ if (isset($_GET['action']) && $_GET['action'] == 'harvest' && (isset($_GET['node
 
                     $data = OaiParserHelper::parse($node_type, $dc, $dbs, $cache_publisher, $cache_place);
 
+                    $external_link = '';
+                    if (isset($dc->identifier)) {
+                        foreach ($dc->identifier as $identifier) {
+                            $id_val = trim((string)$identifier);
+                            if (filter_var($id_val, FILTER_VALIDATE_URL)) {
+                                $external_link = $id_val;
+                                break;
+                            }
+                        }
+                    }
+                    if (empty($external_link) && isset($dc->relation)) {
+                        foreach ($dc->relation as $relation) {
+                            $rel_val = trim((string)$relation);
+                            if (filter_var($rel_val, FILTER_VALIDATE_URL)) {
+                                $external_link = $rel_val;
+                                break;
+                            }
+                        }
+                    }
+
+
                     $sql_bib = "REPLACE INTO biblio (gmd_id, title, isbn_issn, publisher_id, publish_year, language_id, publish_place_id, notes, spec_detail_info, input_date, last_update, collation, classification, call_number, image) VALUES ({$data['gmd_id']}, '".$dbs->escape_string($data['title'])."', '".$dbs->escape_string($data['isbn_issn'])."', {$data['publisher_id']}, {$data['publish_year']}, {$data['language_id']}, {$data['place_id']}, '".$dbs->escape_string($data['notes'])."', {$data['detailinfo']}, '$import_date', NOW(), '".$dbs->escape_string($data['collation'])."', '".$dbs->escape_string($data['classification'])."', '".$dbs->escape_string($data['call_number'])."', {$data['image']})";
 
                     if ($dbs->query($sql_bib)) {
@@ -142,6 +164,18 @@ if (isset($_GET['action']) && $_GET['action'] == 'harvest' && (isset($_GET['node
                             $stmt_rel = $dbs->prepare("REPLACE INTO harvest_biblio_relation (node_id, oai_identifier, biblio_id, synced_at) VALUES (?, ?, ?, ?)");
                             $stmt_rel->bind_param("isis", $node_id_pk, $oai_identifier, $biblio_id, $import_date);
                             $stmt_rel->execute();
+
+                            if (!empty($external_link)) {
+                                $stmt_att = $dbs->prepare("REPLACE INTO files (file_title, file_name, file_url, mime_type, file_dir) VALUES (?, ?, ?, 'text/uri-list', 'external')");
+                                $file_title = 'Original Link';
+                                $stmt_att->bind_param("sss", $file_title, $external_link, $external_link);
+                                if ($stmt_att->execute()) {
+                                    $file_id = $dbs->insert_id;
+                                    if ($file_id) {
+                                        $dbs->query("REPLACE INTO biblio_attachment (biblio_id, file_id, access_type) VALUES ({$biblio_id}, {$file_id}, 'public')");
+                                    }
+                                }
+                            }
 
                             if (isset($dc->creator)) {
                                 $author_order = 1;
