@@ -1,0 +1,5 @@
+{
+    "require": {
+        "caseyamcl/phpoaipmh": "^3.0"
+    }
+}
