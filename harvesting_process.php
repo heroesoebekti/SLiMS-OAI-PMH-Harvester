@@ -166,9 +166,10 @@ if (isset($_GET['action']) && $_GET['action'] == 'harvest' && (isset($_GET['node
                             $stmt_rel->execute();
 
                             if (!empty($external_link)) {
-                                $stmt_att = $dbs->prepare("REPLACE INTO files (file_title, file_name, file_url, mime_type, file_dir) VALUES (?, ?, ?, 'text/uri-list', 'external')");
+                                $cur_date = date("Y-m-d H:i:s");
+                                $stmt_att = $dbs->prepare("REPLACE INTO files (file_title, file_name, file_url, mime_type, file_dir, input_date, last_update) VALUES (?, ?, ?, 'text/uri-list', 'external', ?, ?)");
                                 $file_title = 'Original Link';
-                                $stmt_att->bind_param("sss", $file_title, $external_link, $external_link);
+                                $stmt_att->bind_param("sssss", $file_title, $external_link, $external_link, $cur_date, $cur_date);
                                 if ($stmt_att->execute()) {
                                     $file_id = $dbs->insert_id;
                                     if ($file_id) {
